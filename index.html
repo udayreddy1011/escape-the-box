@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 <title>Escape the Box</title>
 
@@ -11,96 +10,100 @@
 <meta name="theme-color" content="#000">
 
 <style>
-  * {
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    -webkit-tap-highlight-color: transparent;
-  }
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  body {
-    margin: 0;
-    background: #111;
-    color: white;
-    font-family: Arial;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100vh;
-    overflow: hidden;
-    touch-action: none;
-  }
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: Arial;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
 
-  #game {
-    width: 320px;
-    height: 480px;
-    background: #222;
-    border: 2px solid white;
-    position: relative;
-    overflow: hidden;
-  }
+#score {
+  margin: 6px;
+  font-size: 18px;
+}
 
-  .player {
-    width: 30px;
-    height: 30px;
-    background: lime;
-    position: absolute;
-    border-radius: 6px;
-    will-change: transform;
-  }
+#game {
+  width: 320px;
+  height: 480px;
+  background: #222;
+  border: 2px solid white;
+  position: relative;
+  overflow: hidden;
+}
 
-  .enemy {
-    width: 26px;
-    height: 26px;
-    background: red;
-    position: absolute;
-    border-radius: 6px;
-    will-change: transform;
-  }
+.player {
+  width: 30px;
+  height: 30px;
+  background: lime;
+  position: absolute;
+  border-radius: 6px;
+  will-change: transform;
+}
 
-  #overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    z-index: 10;
-  }
+.enemy {
+  width: 26px;
+  height: 26px;
+  background: red;
+  position: absolute;
+  border-radius: 6px;
+  will-change: transform;
+}
 
-  #overlay button {
-    margin-top: 20px;
-    padding: 12px 24px;
-    font-size: 18px;
-    border-radius: 8px;
-    border: none;
-  }
+#overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  z-index: 10;
+}
 
-  #controls {
-    margin-top: 10px;
-    display: grid;
-    grid-template-columns: 70px 70px 70px;
-    gap: 10px;
-  }
+#overlay button {
+  margin-top: 20px;
+  padding: 12px 24px;
+  font-size: 18px;
+  border-radius: 8px;
+  border: none;
+}
 
-  .btn {
-    width: 70px;
-    height: 70px;
-    background: #333;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-  }
+#controls {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 70px 70px 70px;
+  gap: 10px;
+}
+
+.btn {
+  width: 70px;
+  height: 70px;
+  background: #333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
 </style>
 </head>
 
 <body>
 
-<h3>Escape the Box</h3>
+<div id="score">Score: 0 | High: 0</div>
 
 <div id="game">
   <div id="player" class="player"></div>
@@ -122,118 +125,145 @@
 </div>
 
 <script>
-  const game = document.getElementById("game");
-  const player = document.getElementById("player");
-  const overlay = document.getElementById("overlay");
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const overlay = document.getElementById("overlay");
+const scoreEl = document.getElementById("score");
 
-  const W = 320, H = 480;
-  const PLAYER_SPEED = 4;
-  const ENEMY_SPEED = 1.6;
+const W = 320, H = 480;
+const PLAYER_SPEED = 4;
+const ENEMY_SPEED = 1.6;
 
-  let px, py;
-  let enemies = [];
-  let keys = {};
-  let gameOver = false;
+let px, py;
+let enemies = [];
+let keys = {};
+let gameOver = false;
 
-  function drawPlayer() {
-    player.style.transform = `translate(${px}px, ${py}px)`;
-  }
+let score = 0;
+let highScore = parseInt(localStorage.getItem("escape-box-high-score")) || 0;
+let lastScoreTime = 0;
+let spawnTimer = null;
 
-  function drawEnemy(e) {
-    e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
-  }
+scoreEl.textContent = `Score: 0 | High: ${highScore}`;
 
-  function init() {
-    px = W / 2 - 15;
-    py = H / 2 - 15;
+function drawPlayer() {
+  player.style.transform = `translate(${px}px, ${py}px)`;
+}
 
-    drawPlayer();
+function drawEnemy(e) {
+  e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
+}
 
-    enemies.forEach(e => e.el.remove());
-    enemies = [];
+function init() {
+  px = W / 2 - 15;
+  py = H / 2 - 15;
+  drawPlayer();
 
-    spawnEnemy();
-    gameOver = false;
-    overlay.style.display = "none";
-  }
+  enemies.forEach(e => e.el.remove());
+  enemies = [];
 
-  document.addEventListener("keydown", e => keys[e.key] = true);
-  document.addEventListener("keyup", e => keys[e.key] = false);
+  score = 0;
+  lastScoreTime = performance.now();
+  scoreEl.textContent = `Score: 0 | High: ${highScore}`;
 
-  function handlePlayer() {
-    if (keys["ArrowUp"]) py -= PLAYER_SPEED;
-    if (keys["ArrowDown"]) py += PLAYER_SPEED;
-    if (keys["ArrowLeft"]) px -= PLAYER_SPEED;
-    if (keys["ArrowRight"]) px += PLAYER_SPEED;
+  overlay.style.display = "none";
+  gameOver = false;
 
-    px = Math.max(0, Math.min(W - 30, px));
-    py = Math.max(0, Math.min(H - 30, py));
-
-    drawPlayer();
-  }
-
-  ["up","down","left","right"].forEach(id => {
-    const map = {
-      up:"ArrowUp", down:"ArrowDown",
-      left:"ArrowLeft", right:"ArrowRight"
-    };
-
-    const btn = document.getElementById(id);
-    btn.ontouchstart = () => keys[map[id]] = true;
-    btn.ontouchend = () => keys[map[id]] = false;
-  });
-
-  function spawnEnemy() {
-    const el = document.createElement("div");
-    el.className = "enemy";
-
-    const side = Math.floor(Math.random() * 4);
-    let x, y;
-
-    if (side === 0) { x = Math.random()*W; y = 0; }
-    if (side === 1) { x = Math.random()*W; y = H; }
-    if (side === 2) { x = 0; y = Math.random()*H; }
-    if (side === 3) { x = W; y = Math.random()*H; }
-
-    game.appendChild(el);
-    enemies.push({ el, x, y });
-  }
-
-  setInterval(() => {
+  clearInterval(spawnTimer);
+  spawnEnemy();
+  spawnTimer = setInterval(() => {
     if (!gameOver) spawnEnemy();
   }, 5000);
+}
 
-  function loop() {
-    if (gameOver) return;
+function spawnEnemy() {
+  const el = document.createElement("div");
+  el.className = "enemy";
 
-    handlePlayer();
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
 
-    enemies.forEach(e => {
-      const dx = px - e.x;
-      const dy = py - e.y;
-      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+  if (side === 0) { x = Math.random() * W; y = 0; }
+  if (side === 1) { x = Math.random() * W; y = H; }
+  if (side === 2) { x = 0; y = Math.random() * H; }
+  if (side === 3) { x = W; y = Math.random() * H; }
 
-      e.x += (dx/dist) * ENEMY_SPEED;
-      e.y += (dy/dist) * ENEMY_SPEED;
+  game.appendChild(el);
+  enemies.push({ el, x, y });
+}
 
-      drawEnemy(e);
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-      if (Math.abs(e.x - px) < 22 &&
-          Math.abs(e.y - py) < 22) {
-        gameOver = true;
-        overlay.style.display = "flex";
-      }
-    });
+["up","down","left","right"].forEach(id => {
+  const map = {
+    up: "ArrowUp",
+    down: "ArrowDown",
+    left: "ArrowLeft",
+    right: "ArrowRight"
+  };
 
-    requestAnimationFrame(loop);
+  const btn = document.getElementById(id);
+  btn.ontouchstart = () => keys[map[id]] = true;
+  btn.ontouchend = () => keys[map[id]] = false;
+});
+
+function loop(time) {
+  if (gameOver) return;
+
+  if (keys["ArrowUp"]) py -= PLAYER_SPEED;
+  if (keys["ArrowDown"]) py += PLAYER_SPEED;
+  if (keys["ArrowLeft"]) px -= PLAYER_SPEED;
+  if (keys["ArrowRight"]) px += PLAYER_SPEED;
+
+  px = Math.max(0, Math.min(W - 30, px));
+  py = Math.max(0, Math.min(H - 30, py));
+  drawPlayer();
+
+  if (time - lastScoreTime > 1000) {
+    score++;
+    scoreEl.textContent = `Score: ${score} | High: ${highScore}`;
+    lastScoreTime = time;
   }
 
+  enemies.forEach(e => {
+    const dx = px - e.x;
+    const dy = py - e.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    e.x += (dx / dist) * ENEMY_SPEED;
+    e.y += (dy / dist) * ENEMY_SPEED;
+    drawEnemy(e);
+
+    if (Math.abs(e.x - px) < 22 &&
+        Math.abs(e.y - py) < 22) {
+
+      gameOver = true;
+
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("escape-box-high-score", highScore);
+      }
+
+      scoreEl.textContent = `Score: ${score} | High: ${highScore}`;
+      overlay.style.display = "flex";
+    }
+  });
+
+  requestAnimationFrame(loop);
+}
+
+function restartGame() {
   init();
   requestAnimationFrame(loop);
+}
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js");
-  }
+init();
+requestAnimationFrame(loop);
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js");
+}
 </script>
 
 </body>
