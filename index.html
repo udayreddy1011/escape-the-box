@@ -14,7 +14,7 @@
     body {
       margin: 0;
       background: #111;
-      color: #fff;
+      color: white;
       font-family: Arial;
       display: flex;
       flex-direction: column;
@@ -24,75 +24,47 @@
       touch-action: none;
     }
 
-    h2 {
-      margin: 10px;
-    }
-
     #game {
       position: relative;
-      width: 300px;
-      height: 400px;
+      width: 320px;
+      height: 480px;
       background: #222;
-      border: 2px solid #fff;
+      border: 2px solid white;
+      overflow: hidden;
     }
 
-    #player {
+    .player {
       width: 30px;
       height: 30px;
       background: lime;
       position: absolute;
-      left: 135px;
-      top: 350px;
       border-radius: 6px;
     }
 
-    #enemy {
-      width: 30px;
-      height: 30px;
+    .enemy {
+      width: 28px;
+      height: 28px;
       background: red;
       position: absolute;
-      left: 100px;
-      top: 0;
       border-radius: 6px;
     }
 
-    #gameOver {
-      display: none;
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      color: white;
-      font-size: 26px;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-    }
-
-    /* mobile controls */
     #controls {
+      display: grid;
+      grid-template-columns: 70px 70px 70px;
+      gap: 10px;
       margin-top: 10px;
-      display: flex;
-      gap: 30px;
     }
 
     .btn {
       width: 70px;
       height: 70px;
-      border-radius: 50%;
       background: #333;
-      color: white;
-      font-size: 30px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 24px;
       user-select: none;
     }
   </style>
@@ -100,118 +72,135 @@
 
 <body>
 
-<h2>Escape the Box</h2>
+<h3>Escape the Box</h3>
 
 <div id="game">
-  <div id="player"></div>
-  <div id="enemy"></div>
-
-  <div id="gameOver">
-    <div>Game Over</div>
-    <button onclick="restart()">Restart</button>
-  </div>
+  <div id="player" class="player"></div>
 </div>
 
-<!-- Touch buttons -->
+<!-- D-Pad -->
 <div id="controls">
+  <div></div>
+  <div class="btn" id="up">⬆️</div>
+  <div></div>
+
   <div class="btn" id="left">⬅️</div>
+  <div class="btn" id="down">⬇️</div>
   <div class="btn" id="right">➡️</div>
 </div>
 
 <script>
+  const game = document.getElementById("game");
   const player = document.getElementById("player");
-  const enemy = document.getElementById("enemy");
-  const gameOverScreen = document.getElementById("gameOver");
 
-  let playerX = 135;
-  let enemyY = 0;
-  let enemyX = Math.random() * 270;
+  const gameWidth = 320;
+  const gameHeight = 480;
 
-  let speed = 4;
-  let running = true;
+  let px = 145;
+  let py = 220;
 
-  function gameLoop() {
-    if (!running) return;
+  const speed = 6;
+  let enemies = [];
+  let gameOver = false;
 
-    enemyY += speed;
+  player.style.left = px + "px";
+  player.style.top = py + "px";
 
-    enemy.style.top = enemyY + "px";
-    enemy.style.left = enemyX + "px";
+  /* ---------- PLAYER MOVEMENT ---------- */
 
-    // collision
-    if (
-      enemyY > 320 &&
-      Math.abs(enemyX - playerX) < 30
-    ) {
-      endGame();
-    }
-
-    if (enemyY > 400) {
-      enemyY = 0;
-      enemyX = Math.random() * 270;
-    }
-
-    requestAnimationFrame(gameLoop);
-  }
-
-  function endGame() {
-    running = false;
-    gameOverScreen.style.display = "flex";
-  }
-
-  function restart() {
-    enemyY = 0;
-    enemyX = Math.random() * 270;
-    running = true;
-    gameOverScreen.style.display = "none";
-    requestAnimationFrame(gameLoop);
+  function move(dx, dy) {
+    px = Math.max(0, Math.min(gameWidth - 30, px + dx));
+    py = Math.max(0, Math.min(gameHeight - 30, py + dy));
+    player.style.left = px + "px";
+    player.style.top = py + "px";
   }
 
   // keyboard
   document.addEventListener("keydown", e => {
-    if (e.key === "ArrowLeft") moveLeft();
-    if (e.key === "ArrowRight") moveRight();
+    if (e.key === "ArrowUp") move(0, -speed);
+    if (e.key === "ArrowDown") move(0, speed);
+    if (e.key === "ArrowLeft") move(-speed, 0);
+    if (e.key === "ArrowRight") move(speed, 0);
   });
-
-  function moveLeft() {
-    playerX = Math.max(0, playerX - 25);
-    player.style.left = playerX + "px";
-  }
-
-  function moveRight() {
-    playerX = Math.min(270, playerX + 25);
-    player.style.left = playerX + "px";
-  }
 
   // touch buttons
-  document.getElementById("left").addEventListener("touchstart", e => {
-    e.preventDefault();
-    moveLeft();
-  });
+  document.getElementById("up").ontouchstart = () => move(0, -speed);
+  document.getElementById("down").ontouchstart = () => move(0, speed);
+  document.getElementById("left").ontouchstart = () => move(-speed, 0);
+  document.getElementById("right").ontouchstart = () => move(speed, 0);
 
-  document.getElementById("right").addEventListener("touchstart", e => {
-    e.preventDefault();
-    moveRight();
-  });
+  /* ---------- ENEMY SPAWN ---------- */
 
-  // swipe support
-  let startX = 0;
+  function spawnEnemy() {
+    const enemy = document.createElement("div");
+    enemy.className = "enemy";
 
-  document.addEventListener("touchstart", e => {
-    startX = e.touches[0].clientX;
-  });
+    const side = Math.floor(Math.random() * 4);
 
-  document.addEventListener("touchend", e => {
-    let endX = e.changedTouches[0].clientX;
-    let diff = endX - startX;
+    let x, y, vx, vy;
 
-    if (diff > 40) moveRight();
-    if (diff < -40) moveLeft();
-  });
+    if (side === 0) { // top
+      x = Math.random() * 290;
+      y = -30;
+      vx = 0;
+      vy = 2;
+    } else if (side === 1) { // bottom
+      x = Math.random() * 290;
+      y = gameHeight + 30;
+      vx = 0;
+      vy = -2;
+    } else if (side === 2) { // left
+      x = -30;
+      y = Math.random() * 450;
+      vx = 2;
+      vy = 0;
+    } else { // right
+      x = gameWidth + 30;
+      y = Math.random() * 450;
+      vx = -2;
+      vy = 0;
+    }
 
-  requestAnimationFrame(gameLoop);
+    enemy.style.left = x + "px";
+    enemy.style.top = y + "px";
 
-  // PWA
+    game.appendChild(enemy);
+
+    enemies.push({ el: enemy, x, y, vx, vy });
+  }
+
+  setInterval(spawnEnemy, 5000);
+  spawnEnemy();
+
+  /* ---------- GAME LOOP ---------- */
+
+  function loop() {
+    if (gameOver) return;
+
+    enemies.forEach((e, i) => {
+      e.x += e.vx;
+      e.y += e.vy;
+
+      e.el.style.left = e.x + "px";
+      e.el.style.top = e.y + "px";
+
+      // collision
+      if (
+        Math.abs(e.x - px) < 25 &&
+        Math.abs(e.y - py) < 25
+      ) {
+        alert("Game Over");
+        gameOver = true;
+        return;
+      }
+    });
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+
+  /* ---------- PWA ---------- */
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./service-worker.js");
   }
