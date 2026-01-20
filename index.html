@@ -1,94 +1,101 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="UTF-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no">
 
-  <title>Escape the Box</title>
+<title>Escape the Box</title>
 
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#000">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#000">
 
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: Arial;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100vh;
-      overflow: hidden;
-      touch-action: none;
-    }
+<style>
+  * {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-    #game {
-      width: 320px;
-      height: 480px;
-      background: #222;
-      border: 2px solid white;
-      position: relative;
-      overflow: hidden;
-    }
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    touch-action: none;
+  }
 
-    .player {
-      width: 30px;
-      height: 30px;
-      background: lime;
-      position: absolute;
-      border-radius: 6px;
-    }
+  #game {
+    width: 320px;
+    height: 480px;
+    background: #222;
+    border: 2px solid white;
+    position: relative;
+    overflow: hidden;
+  }
 
-    .enemy {
-      width: 26px;
-      height: 26px;
-      background: red;
-      position: absolute;
-      border-radius: 6px;
-    }
+  .player {
+    width: 30px;
+    height: 30px;
+    background: lime;
+    position: absolute;
+    border-radius: 6px;
+    will-change: transform;
+  }
 
-    /* GAME OVER SCREEN */
-    #overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      z-index: 10;
-    }
+  .enemy {
+    width: 26px;
+    height: 26px;
+    background: red;
+    position: absolute;
+    border-radius: 6px;
+    will-change: transform;
+  }
 
-    #overlay button {
-      margin-top: 20px;
-      padding: 12px 24px;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-    }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    z-index: 10;
+  }
 
-    #controls {
-      margin-top: 10px;
-      display: grid;
-      grid-template-columns: 70px 70px 70px;
-      gap: 10px;
-    }
+  #overlay button {
+    margin-top: 20px;
+    padding: 12px 24px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: none;
+  }
 
-    .btn {
-      width: 70px;
-      height: 70px;
-      background: #333;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      user-select: none;
-    }
-  </style>
+  #controls {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: 70px 70px 70px;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 70px;
+    height: 70px;
+    background: #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+</style>
 </head>
 
 <body>
@@ -104,7 +111,6 @@
   </div>
 </div>
 
-<!-- Controls -->
 <div id="controls">
   <div></div>
   <div class="btn" id="up">⬆️</div>
@@ -129,12 +135,19 @@
   let keys = {};
   let gameOver = false;
 
+  function drawPlayer() {
+    player.style.transform = `translate(${px}px, ${py}px)`;
+  }
+
+  function drawEnemy(e) {
+    e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
+  }
+
   function init() {
     px = W / 2 - 15;
     py = H / 2 - 15;
 
-    player.style.left = px + "px";
-    player.style.top = py + "px";
+    drawPlayer();
 
     enemies.forEach(e => e.el.remove());
     enemies = [];
@@ -144,7 +157,6 @@
     overlay.style.display = "none";
   }
 
-  /* PLAYER MOVEMENT */
   document.addEventListener("keydown", e => keys[e.key] = true);
   document.addEventListener("keyup", e => keys[e.key] = false);
 
@@ -157,69 +169,57 @@
     px = Math.max(0, Math.min(W - 30, px));
     py = Math.max(0, Math.min(H - 30, py));
 
-    player.style.left = px + "px";
-    player.style.top = py + "px";
+    drawPlayer();
   }
 
-  // touch hold
-  const map = {
-    up: "ArrowUp",
-    down: "ArrowDown",
-    left: "ArrowLeft",
-    right: "ArrowRight"
-  };
+  ["up","down","left","right"].forEach(id => {
+    const map = {
+      up:"ArrowUp", down:"ArrowDown",
+      left:"ArrowLeft", right:"ArrowRight"
+    };
 
-  Object.keys(map).forEach(id => {
     const btn = document.getElementById(id);
     btn.ontouchstart = () => keys[map[id]] = true;
     btn.ontouchend = () => keys[map[id]] = false;
   });
 
-  /* ENEMY SPAWN */
   function spawnEnemy() {
-    const e = document.createElement("div");
-    e.className = "enemy";
+    const el = document.createElement("div");
+    el.className = "enemy";
 
     const side = Math.floor(Math.random() * 4);
     let x, y;
 
-    if (side === 0) { x = Math.random() * W; y = 0; }
-    if (side === 1) { x = Math.random() * W; y = H; }
-    if (side === 2) { x = 0; y = Math.random() * H; }
-    if (side === 3) { x = W; y = Math.random() * H; }
+    if (side === 0) { x = Math.random()*W; y = 0; }
+    if (side === 1) { x = Math.random()*W; y = H; }
+    if (side === 2) { x = 0; y = Math.random()*H; }
+    if (side === 3) { x = W; y = Math.random()*H; }
 
-    e.style.left = x + "px";
-    e.style.top = y + "px";
-
-    game.appendChild(e);
-    enemies.push({ el: e, x, y });
+    game.appendChild(el);
+    enemies.push({ el, x, y });
   }
 
   setInterval(() => {
     if (!gameOver) spawnEnemy();
   }, 5000);
 
-  /* GAME LOOP */
   function loop() {
     if (gameOver) return;
 
     handlePlayer();
 
-    enemies.forEach(enemy => {
-      const dx = px - enemy.x;
-      const dy = py - enemy.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    enemies.forEach(e => {
+      const dx = px - e.x;
+      const dy = py - e.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
 
-      enemy.x += (dx / dist) * ENEMY_SPEED;
-      enemy.y += (dy / dist) * ENEMY_SPEED;
+      e.x += (dx/dist) * ENEMY_SPEED;
+      e.y += (dy/dist) * ENEMY_SPEED;
 
-      enemy.el.style.left = enemy.x + "px";
-      enemy.el.style.top = enemy.y + "px";
+      drawEnemy(e);
 
-      if (
-        Math.abs(enemy.x - px) < 22 &&
-        Math.abs(enemy.y - py) < 22
-      ) {
+      if (Math.abs(e.x - px) < 22 &&
+          Math.abs(e.y - py) < 22) {
         gameOver = true;
         overlay.style.display = "flex";
       }
@@ -228,15 +228,9 @@
     requestAnimationFrame(loop);
   }
 
-  function restartGame() {
-    init();
-    requestAnimationFrame(loop);
-  }
-
   init();
   requestAnimationFrame(loop);
 
-  /* PWA */
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./service-worker.js");
   }
