@@ -1,180 +1,220 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Escape the Box</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#000000">
-<meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Escape the Box</title>
 
-<link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#000000">
 
-<style>
-body {
-  margin: 0;
-  background: #000;
-  overflow: hidden;
-  font-family: Arial;
-  color: white;
-}
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: Arial;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: none;
+    }
 
-#score {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  font-size: 18px;
-}
+    h2 {
+      margin: 10px;
+    }
 
-.player {
-  width: 20px;
-  height: 20px;
-  background: lime;
-  position: absolute;
-}
+    #game {
+      position: relative;
+      width: 300px;
+      height: 400px;
+      background: #222;
+      border: 2px solid #fff;
+    }
 
-.enemy {
-  width: 20px;
-  height: 20px;
-  background: red;
-  position: absolute;
-}
+    #player {
+      width: 30px;
+      height: 30px;
+      background: lime;
+      position: absolute;
+      left: 135px;
+      top: 350px;
+      border-radius: 6px;
+    }
 
-#joystick {
-  position: fixed;
-  bottom: 30px;
-  left: 30px;
-  width: 120px;
-  height: 120px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 50%;
-}
+    #enemy {
+      width: 30px;
+      height: 30px;
+      background: red;
+      position: absolute;
+      left: 100px;
+      top: 0;
+      border-radius: 6px;
+    }
 
-#stick {
-  width: 50px;
-  height: 50px;
-  background: white;
-  border-radius: 50%;
-  position: absolute;
-  left: 35px;
-  top: 35px;
-}
-</style>
+    #gameOver {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      font-size: 26px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    /* mobile controls */
+    #controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 30px;
+    }
+
+    .btn {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: #333;
+      color: white;
+      font-size: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+  </style>
 </head>
 
 <body>
 
-<div id="score">Time: 0 | Best: 0</div>
+<h2>Escape the Box</h2>
 
-<div class="player" id="player"></div>
+<div id="game">
+  <div id="player"></div>
+  <div id="enemy"></div>
 
-<div id="joystick">
-  <div id="stick"></div>
+  <div id="gameOver">
+    <div>Game Over</div>
+    <button onclick="restart()">Restart</button>
+  </div>
+</div>
+
+<!-- Touch buttons -->
+<div id="controls">
+  <div class="btn" id="left">⬅️</div>
+  <div class="btn" id="right">➡️</div>
 </div>
 
 <script>
-const player = document.getElementById("player");
-const scoreEl = document.getElementById("score");
+  const player = document.getElementById("player");
+  const enemy = document.getElementById("enemy");
+  const gameOverScreen = document.getElementById("gameOver");
 
-let px = window.innerWidth / 2;
-let py = window.innerHeight / 2;
+  let playerX = 135;
+  let enemyY = 0;
+  let enemyX = Math.random() * 270;
 
-let enemies = [];
-let time = 0;
-let best = localStorage.getItem("best") || 0;
-let enemySpeed = 1.5;
+  let speed = 4;
+  let running = true;
 
-let joyX = 0;
-let joyY = 0;
+  function gameLoop() {
+    if (!running) return;
 
-// PLAYER POSITION
-function updatePlayer() {
-  px += joyX * 4;
-  py += joyY * 4;
+    enemyY += speed;
 
-  px = Math.max(0, Math.min(window.innerWidth - 20, px));
-  py = Math.max(0, Math.min(window.innerHeight - 20, py));
+    enemy.style.top = enemyY + "px";
+    enemy.style.left = enemyX + "px";
 
-  player.style.left = px + "px";
-  player.style.top = py + "px";
-}
-
-// ENEMY
-function spawnEnemy() {
-  const e = document.createElement("div");
-  e.className = "enemy";
-  e.x = Math.random() * window.innerWidth;
-  e.y = Math.random() * window.innerHeight;
-  e.style.left = e.x + "px";
-  e.style.top = e.y + "px";
-  document.body.appendChild(e);
-  enemies.push(e);
-}
-
-spawnEnemy();
-
-// GAME LOOP
-setInterval(() => {
-  updatePlayer();
-
-  enemies.forEach(e => {
-    const dx = px - e.x;
-    const dy = py - e.y;
-    const dist = Math.hypot(dx, dy);
-
-    e.x += (dx / dist) * enemySpeed;
-    e.y += (dy / dist) * enemySpeed;
-
-    e.style.left = e.x + "px";
-    e.style.top = e.y + "px";
-
-    if (Math.abs(e.x - px) < 15 && Math.abs(e.y - py) < 15) {
-      alert("Game Over!");
-      if (time > best) localStorage.setItem("best", time);
-      location.reload();
+    // collision
+    if (
+      enemyY > 320 &&
+      Math.abs(enemyX - playerX) < 30
+    ) {
+      endGame();
     }
+
+    if (enemyY > 400) {
+      enemyY = 0;
+      enemyX = Math.random() * 270;
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function endGame() {
+    running = false;
+    gameOverScreen.style.display = "flex";
+  }
+
+  function restart() {
+    enemyY = 0;
+    enemyX = Math.random() * 270;
+    running = true;
+    gameOverScreen.style.display = "none";
+    requestAnimationFrame(gameLoop);
+  }
+
+  // keyboard
+  document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") moveLeft();
+    if (e.key === "ArrowRight") moveRight();
   });
 
-  time++;
-  scoreEl.textContent = "Time: " + time + " | Best: " + best;
+  function moveLeft() {
+    playerX = Math.max(0, playerX - 25);
+    player.style.left = playerX + "px";
+  }
 
-}, 50);
+  function moveRight() {
+    playerX = Math.min(270, playerX + 25);
+    player.style.left = playerX + "px";
+  }
 
-// NEW ENEMY EVERY 5 SEC
-setInterval(() => spawnEnemy(), 5000);
+  // touch buttons
+  document.getElementById("left").addEventListener("touchstart", e => {
+    e.preventDefault();
+    moveLeft();
+  });
 
-// INCREASE DIFFICULTY
-setInterval(() => enemySpeed += 0.3, 10000);
+  document.getElementById("right").addEventListener("touchstart", e => {
+    e.preventDefault();
+    moveRight();
+  });
 
-// JOYSTICK
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
+  // swipe support
+  let startX = 0;
 
-joystick.addEventListener("touchmove", e => {
-  const t = e.touches[0];
-  const r = joystick.getBoundingClientRect();
+  document.addEventListener("touchstart", e => {
+    startX = e.touches[0].clientX;
+  });
 
-  const x = t.clientX - r.left - 60;
-  const y = t.clientY - r.top - 60;
+  document.addEventListener("touchend", e => {
+    let endX = e.changedTouches[0].clientX;
+    let diff = endX - startX;
 
-  joyX = Math.max(-1, Math.min(1, x / 40));
-  joyY = Math.max(-1, Math.min(1, y / 40));
+    if (diff > 40) moveRight();
+    if (diff < -40) moveLeft();
+  });
 
-  stick.style.left = 35 + joyX * 30 + "px";
-  stick.style.top = 35 + joyY * 30 + "px";
-});
+  requestAnimationFrame(gameLoop);
 
-joystick.addEventListener("touchend", () => {
-  joyX = 0;
-  joyY = 0;
-  stick.style.left = "35px";
-  stick.style.top = "35px";
-});
-
-// SERVICE WORKER
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
+  // PWA
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js");
+  }
 </script>
 
 </body>
