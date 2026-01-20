@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Escape the Box</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+body {
+  margin: 0;
+  background: #000;
+  overflow: hidden;
+  font-family: Arial;
+  color: white;
+}
+
+#score {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  font-size: 18px;
+}
+
+.player {
+  width: 20px;
+  height: 20px;
+  background: lime;
+  position: absolute;
+}
+
+.enemy {
+  width: 20px;
+  height: 20px;
+  background: red;
+  position: absolute;
+}
+
+#joystick {
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  width: 120px;
+  height: 120px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+
+#stick {
+  width: 50px;
+  height: 50px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  left: 35px;
+  top: 35px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="score">Time: 0 | Best: 0</div>
+
+<div class="player" id="player"></div>
+
+<div id="joystick">
+  <div id="stick"></div>
+</div>
+
+<script>
+const player = document.getElementById("player");
+const scoreEl = document.getElementById("score");
+
+let px = window.innerWidth / 2;
+let py = window.innerHeight / 2;
+
+let enemies = [];
+let time = 0;
+let best = localStorage.getItem("best") || 0;
+let enemySpeed = 1.5;
+
+let joyX = 0;
+let joyY = 0;
+
+// PLAYER POSITION
+function updatePlayer() {
+  px += joyX * 4;
+  py += joyY * 4;
+
+  px = Math.max(0, Math.min(window.innerWidth - 20, px));
+  py = Math.max(0, Math.min(window.innerHeight - 20, py));
+
+  player.style.left = px + "px";
+  player.style.top = py + "px";
+}
+
+// ENEMY
+function spawnEnemy() {
+  const e = document.createElement("div");
+  e.className = "enemy";
+  e.x = Math.random() * window.innerWidth;
+  e.y = Math.random() * window.innerHeight;
+  e.style.left = e.x + "px";
+  e.style.top = e.y + "px";
+  document.body.appendChild(e);
+  enemies.push(e);
+}
+
+spawnEnemy();
+
+// GAME LOOP
+setInterval(() => {
+  updatePlayer();
+
+  enemies.forEach(e => {
+    const dx = px - e.x;
+    const dy = py - e.y;
+    const dist = Math.hypot(dx, dy);
+
+    e.x += (dx / dist) * enemySpeed;
+    e.y += (dy / dist) * enemySpeed;
+
+    e.style.left = e.x + "px";
+    e.style.top = e.y + "px";
+
+    if (Math.abs(e.x - px) < 15 && Math.abs(e.y - py) < 15) {
+      alert("Game Over!");
+      if (time > best) localStorage.setItem("best", time);
+      location.reload();
+    }
+  });
+
+  time++;
+  scoreEl.textContent = "Time: " + time + " | Best: " + best;
+
+}, 50);
+
+// NEW ENEMY EVERY 5 SEC
+setInterval(() => spawnEnemy(), 5000);
+
+// INCREASE DIFFICULTY
+setInterval(() => enemySpeed += 0.3, 10000);
+
+// JOYSTICK
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+
+joystick.addEventListener("touchmove", e => {
+  const t = e.touches[0];
+  const r = joystick.getBoundingClientRect();
+
+  const x = t.clientX - r.left - 60;
+  const y = t.clientY - r.top - 60;
+
+  joyX = Math.max(-1, Math.min(1, x / 40));
+  joyY = Math.max(-1, Math.min(1, y / 40));
+
+  stick.style.left = 35 + joyX * 30 + "px";
+  stick.style.top = 35 + joyY * 30 + "px";
+});
+
+joystick.addEventListener("touchend", () => {
+  joyX = 0;
+  joyY = 0;
+  stick.style.left = "35px";
+  stick.style.top = "35px";
+});
+
+// SERVICE WORKER
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
